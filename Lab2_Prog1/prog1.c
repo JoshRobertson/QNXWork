@@ -27,17 +27,11 @@ int main(void) {
 	sa.sa_flags = 0;
 	sigemptyset(&sa.sa_mask);
 
+	sigaction(SIGUSR1, &sa, NULL);
+
 	printf("PID = %d : Running...\n", getpid());
-
-	if (sigaction(SIGINT, &sa, NULL) == -1) {
-		perror("sigaction");
-		exit(1);
-	}
-    sigaction(SIGUSR1, &sa, NULL);
-
     while(usr1Happened != 1){} //Loop until SIGUSR1
-
-    printf("usr1Happened: %d\n", usr1Happened);
+    printf("PID = %d : Received USR1\n", getpid());
     printf("PID = %d : Exiting...\n", getpid());
 
 	return 0;
@@ -46,8 +40,5 @@ int main(void) {
 void sig_handler(int sig){
 	if (sig == SIGUSR1){
     	usr1Happened = 1;
-    	printf("PID = %d : Received USR1\n", getpid());
 	}
-	else
-		write(0, "\nAhhh! SIGINT!\n", 14);
 }
