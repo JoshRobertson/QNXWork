@@ -7,7 +7,11 @@ QCONFIG=qconfig.mk
 endif
 include $(QCONFIG)
 
+#===== USEFILE - the file containing the usage message for the application. 
 USEFILE=
+
+#===== CCFLAGS - add the flags to the C compiler command line. 
+CCFLAGS+=-std=c99
 
 include $(MKFILES_ROOT)/qmacros.mk
 ifndef QNX_INTERNAL
@@ -16,5 +20,7 @@ endif
 include $(QNX_INTERNAL)
 
 include $(MKFILES_ROOT)/qtargets.mk
+
 OPTIMIZE_TYPE_g=none
 OPTIMIZE_TYPE=$(OPTIMIZE_TYPE_$(filter g, $(VARIANTS)))
+
