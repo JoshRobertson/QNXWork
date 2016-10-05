@@ -1,9 +1,3 @@
-/*
- ** sigint.c -- grabs SIGINT
- * Source:  http://beej.us/guide/bgipc/output/html/multipage/signals.html
- * Mod. by:  Carolina Ayala
- * compile with -std=gnu99 flag!
- */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -11,18 +5,12 @@
 #include <errno.h>
 #include <signal.h>
 
-
 void sig_handler(int sig);
 sig_atomic_t usr1Happened = 0;
 
-/*******************************************************************************
- * main( )
- ******************************************************************************/
 int main(void) {
-	char s[140];
-	struct sigaction sa;
-	memset(&sa, 0, sizeof(sa));
 
+	struct sigaction sa;
 	sa.sa_handler = sig_handler;
 	sa.sa_flags = 0;
 	sigemptyset(&sa.sa_mask);
