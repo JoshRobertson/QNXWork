@@ -25,20 +25,28 @@ int main(void)
 	sa.sa_handler = sig_handler;
 	sa.sa_flags = 0;
 	sigemptyset(&sa.sa_mask);
-	int i;
+	int i, err;
 	int numChildren = 0;
 	usr1Happened = 0;
 	mySemaphore = sem_open(SNAME, O_CREAT, S_IRWXG | S_IRWXU | S_IRWXO, 0);
+
+	if(mySemaphore == SEM_FAILED)
+		perror("sem_open");
+
 	printf("Prog1 PID: %d\n", getpid());
-	sigaction(SIGUSR1, &sa, NULL);
+	if (sigaction(SIGINT, &sa, NULL) == -1) {
+		perror("sigaction");
+		exit(1);
+	}
 	printf("Enter the number of child threads to create: ");
 	fflush(0);
 	scanf("%d", &numChildren);
 	pthread_t* childThreads;
 
 	for (i = 0; i <numChildren; i++){
-		pthread_create(&childThreads[i], NULL, &childWaitFunc, NULL);
-		//pthread_join(&childThreads[i], NULL);
+		err = pthread_create(&childThreads[i], NULL, &childWaitFunc, NULL);
+		if(err !=0)
+			printf("\ncan't create thread :[%s]", strerror(err));
 	}
 
 	while (usr1Happened != 1){

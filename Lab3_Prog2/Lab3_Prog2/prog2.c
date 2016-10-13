@@ -32,6 +32,7 @@ int main(void)
 			sem_post(mySemaphore);
 		}
 	}while(numWake != 0);
+	sem_destroy(mySemaphore);
 	printf("Prog2 Exited Successfully\n");
 	exit(0);
 	return EXIT_SUCCESS;
