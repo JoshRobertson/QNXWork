@@ -8,9 +8,16 @@
 
 int main(int argc, char* argv[]) //program name (0), pid (1), a (2), op (3), b (4)
 {
-	int coid;
+	int coid, i;
 	request myRequest;
 	response myResponse;
+
+	for (i = 0; i <=4; i++){
+		if (argv[i] == NULL){
+			printf("Error: Arg %d is NULL. Incorrect number of arguments \n", i);
+			exit(EXIT_FAILURE);
+		}
+	}
 
 	pid_t serverpid = atoi(argv[1]);
 	myRequest.a = atoi(argv[2]);

@@ -44,7 +44,7 @@ int main (int argc, char* argv[])
         		myResponse.status = 0;
         	}
         }
-        else if (operator == 'x'){
+        else if (operator == 'x' || operator == '*'){
         	myResponse.result = a * b;
         	myResponse.status = 0;
         }

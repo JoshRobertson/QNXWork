@@ -29,10 +29,6 @@ int main(void)
 	printf("Enter the number of children: ");
 	scanf("%d", &numChildren);
 
-	//char n[3];
-	//fgets(n, sizeof n, stdin);
-	//numbChildren = atoi(n);
-
 	printf("PID = %d : Parent Running...\n", getpid());
 
 	for (int i = 0; i <numChildren; i++){
