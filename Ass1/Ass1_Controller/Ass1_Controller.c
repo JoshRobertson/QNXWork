@@ -7,12 +7,45 @@
 #include <sys/netmgr.h>
 #include "mystruct.h"
 
+typedef void *(*StateFunc)(); //sFP is a pointer to a function taking no args and returning void
+
+InputMessage input;
+DisplayMessage outputToDisplay;
+DisplayMessage responseToInputs;
+DisplayMessage responseFromDisplay;
+
+sig_atomic_t persistWeight = 0;
+sig_atomic_t persistId = 0;
+int     rcvid;         	// indicates who we should reply to
+int     chid;          	// the channel ID
+int 	coid;
+
+//State Function Prototypes
+void *IDLE(); 			//can L_ENTRY or R_EXIT
+void *L_ENTRY();
+void *L_UNLOCK_ENTRY();
+void *L_OPEN_ENTRY();
+void *L_WOE();
+void *L_CLS_ENTRY();
+void *L_LOCK_ENTRY();
+void *R_UNLOCK_ENTRY();
+void *R_OPEN_ENTRY();
+void *R_CLS_ENTRY();
+void *R_LOCK_ENTRY();
+void *R_EXIT();
+void *R_UNLOCK_EXIT();
+void *R_OPEN_EXIT();
+void *R_WOE();
+void *R_CLS_EXIT();
+void *R_LOCK_EXIT();		//can L_UNLOCK_EXIT or ERROR_ALERT
+void *L_UNLOCK_EXIT();
+void *L_OPEN_EXIT();
+void *L_CLS_EXIT();
+void *L_LOCK_EXIT();
+void *ERROR_ALERT();
+
 int main(int argc, char* argv[])
 {
-	int coid;
-	int     rcvid;         // indicates who we should reply to
-    int     chid;          // the channel ID
-
 	pid_t serverpid = atoi(argv[1]);
     printf("Controller PID is %d\n", getpid());
 
@@ -32,62 +65,11 @@ int main(int argc, char* argv[])
 		exit(EXIT_FAILURE);
 	}
 
-    // this is typical of a server:  it runs forever
+	StateFunc stateFunc = IDLE; //initialize to IDLE state
+
     while (1) {
-        StateInput input;
-        StateInput outputToDisplay;
-        StateInput responseToInputs;
-        StateInput responseFromDisplay;
-
-        rcvid = MsgReceive (chid, &input, sizeof (input), NULL);
-        responseToInputs.status = 0;
-
-        switch(input.inputState){
-        case ls:
-        	sprintf(outputToDisplay.msg,"Left Swipe. Id # %d\n", input.person_id);
-        	break;
-        case rs:
-        	sprintf(outputToDisplay.msg,"Right Swipe. Id # %d\n", input.person_id);
-        	break;
-        case ws:
-        	sprintf(outputToDisplay.msg,"Weight Scale. Weight is: %d lbs\n", input.weight);
-        	break;
-        case lo:
-        	sprintf(outputToDisplay.msg,"Left Door Open\n");
-        	break;
-        case ro:
-        	sprintf(outputToDisplay.msg,"Right Door Open\n");
-        	break;
-        case lc:
-        	sprintf(outputToDisplay.msg,"Left Door Closed\n");
-        	break;
-        case rc:
-        	sprintf(outputToDisplay.msg,"Right Door Closed\n");
-        	break;
-        case gru:
-        	sprintf(outputToDisplay.msg,"Guard Unlocked Right Door\n");
-        	break;
-        case grl:
-        	sprintf(outputToDisplay.msg,"Guard Locked Right Door\n");
-        	break;
-        case gll:
-        	sprintf(outputToDisplay.msg,"Guard Locked Left Door\n");
-        	break;
-        case glu:
-        	sprintf(outputToDisplay.msg,"Guard Unlocked Left Door");
-        	break;
-        default:
-        	responseToInputs.status = 9; //invalid state
-        	sprintf(outputToDisplay.msg, "Error: Invalid State");
-        	break;
-        }
-        MsgReply(rcvid, EOK, &responseToInputs, sizeof (responseToInputs)); //reply to inputs to say ok?
-    	// send the message to display
-    	if (MsgSend(coid, &outputToDisplay, sizeof(outputToDisplay) + 1, &responseFromDisplay, sizeof(responseFromDisplay)) == -1) { //sends msg to server and SEND blocks until it gets a reply
-    		fprintf(stderr, "Error during MsgSend\n");
-    		perror(NULL);
-    		exit(EXIT_FAILURE);
-    	}
+       stateFunc = (StateFunc)(*stateFunc)(); //run whatever stateFunc is currently assigned (default IDLE)
+       sleep(1);
     }
 	//Disconnect from the output display channel
 	ConnectDetach(coid);
@@ -95,3 +77,436 @@ int main(int argc, char* argv[])
     ChannelDestroy(chid);
    return EXIT_SUCCESS;
 }
+
+
+//State Functions
+void *IDLE(){
+	snprintf(outputToDisplay.msg, sizeof(outputToDisplay.msg), "System is idle. Both doors locked, and chamber is empty");
+
+	if (MsgSend(coid, &outputToDisplay, sizeof(outputToDisplay) + 1, &responseFromDisplay, sizeof(responseFromDisplay)) == -1) { //sends msg to server and SEND blocks until it gets a reply
+		fprintf(stderr, "Error during MsgSend to Display\n");
+		perror(NULL);
+		exit(EXIT_FAILURE);
+	}
+
+	while(input.inputEvent != LS && input.inputEvent != RS){
+		rcvid = MsgReceive (chid, &input, sizeof (input), NULL); //receive from Input
+		if (rcvid == -1){
+			perror("MsgReceive");
+		}
+
+	    MsgReply(rcvid, EOK, &responseToInputs, sizeof (responseToInputs)); //reply to inputs to unblock?
+	}
+
+	if (input.inputEvent == LS)
+		return L_ENTRY;
+	else
+		return R_EXIT;
+}
+
+void *L_ENTRY(){
+	snprintf(outputToDisplay.msg, sizeof(outputToDisplay.msg),"Left Door Request for Entry. ID#: %d",input.person_id);
+
+	if (MsgSend(coid, &outputToDisplay, sizeof(outputToDisplay) + 1, &responseFromDisplay, sizeof(responseFromDisplay)) == -1) { //sends msg to server and SEND blocks until it gets a reply
+		fprintf(stderr, "Error during MsgSend to Display\n");
+		perror(NULL);
+		exit(EXIT_FAILURE);
+	}
+
+	while (input.inputEvent != GLU){
+		rcvid = MsgReceive (chid, &input, sizeof (input), NULL); //receive from Input
+		if (rcvid == -1){
+			perror("MsgReceive");
+		}
+
+	    MsgReply(rcvid, EOK, &responseToInputs, sizeof (responseToInputs)); //reply to inputs to unblock?
+	}
+
+	return L_UNLOCK_ENTRY;
+}
+
+void *L_UNLOCK_ENTRY(){
+	snprintf(outputToDisplay.msg, sizeof(outputToDisplay.msg), "Left Door Unlocked before Entry");
+
+	if (MsgSend(coid, &outputToDisplay, sizeof(outputToDisplay) + 1, &responseFromDisplay, sizeof(responseFromDisplay)) == -1) { //sends msg to server and SEND blocks until it gets a reply
+		fprintf(stderr, "Error during MsgSend to Display\n");
+		perror(NULL);
+		exit(EXIT_FAILURE);
+	}
+
+	while (input.inputEvent != LO){
+		rcvid = MsgReceive (chid, &input, sizeof (input), NULL); //receive from Input
+		if (rcvid == -1){
+			perror("MsgReceive");
+		}
+
+	    MsgReply(rcvid, EOK, &responseToInputs, sizeof (responseToInputs)); //reply to inputs to unblock?
+	}
+
+	return L_OPEN_ENTRY;
+}
+void *L_OPEN_ENTRY(){
+	snprintf(outputToDisplay.msg, sizeof(outputToDisplay.msg), "Left Door Open before Entry");
+
+	if (MsgSend(coid, &outputToDisplay, sizeof(outputToDisplay) + 1, &responseFromDisplay, sizeof(responseFromDisplay)) == -1) { //sends msg to server and SEND blocks until it gets a reply
+		fprintf(stderr, "Error during MsgSend to Display\n");
+		perror(NULL);
+		exit(EXIT_FAILURE);
+	}
+
+	while (input.inputEvent != WS){
+		rcvid = MsgReceive (chid, &input, sizeof (input), NULL); //receive from Input
+		if (rcvid == -1){
+			perror("MsgReceive");
+		}
+
+	    MsgReply(rcvid, EOK, &responseToInputs, sizeof (responseToInputs)); //reply to inputs to unblock?
+	}
+
+	return L_WOE;
+}
+void *L_WOE(){
+	persistWeight = input.weight; //keep weight for comparing on exit
+	snprintf(outputToDisplay.msg, sizeof(outputToDisplay.msg), "Weight on Entry is: %d", input.weight);
+
+	if (MsgSend(coid, &outputToDisplay, sizeof(outputToDisplay) + 1, &responseFromDisplay, sizeof(responseFromDisplay)) == -1) { //sends msg to server and SEND blocks until it gets a reply
+		fprintf(stderr, "Error during MsgSend to Display\n");
+		perror(NULL);
+		exit(EXIT_FAILURE);
+	}
+
+	while (input.inputEvent != LC){
+		rcvid = MsgReceive (chid, &input, sizeof (input), NULL); //receive from Input
+		if (rcvid == -1){
+			perror("MsgReceive");
+		}
+
+	    MsgReply(rcvid, EOK, &responseToInputs, sizeof (responseToInputs)); //reply to inputs to unblock?
+	}
+
+	return L_CLS_ENTRY;
+}
+void *L_CLS_ENTRY(){
+	snprintf(outputToDisplay.msg, sizeof(outputToDisplay.msg),"Left Door Closed after Entry");
+
+	if (MsgSend(coid, &outputToDisplay, sizeof(outputToDisplay) + 1, &responseFromDisplay, sizeof(responseFromDisplay)) == -1) { //sends msg to server and SEND blocks until it gets a reply
+		fprintf(stderr, "Error during MsgSend to Display\n");
+		perror(NULL);
+		exit(EXIT_FAILURE);
+	}
+
+	while (input.inputEvent != GLL){
+		rcvid = MsgReceive (chid, &input, sizeof (input), NULL); //receive from Input
+		if (rcvid == -1){
+			perror("MsgReceive");
+		}
+
+	    MsgReply(rcvid, EOK, &responseToInputs, sizeof (responseToInputs)); //reply to inputs to unblock?
+	}
+
+	return L_LOCK_ENTRY;
+}
+void *L_LOCK_ENTRY(){
+	snprintf(outputToDisplay.msg, sizeof(outputToDisplay.msg),"Left Door Locked after Entry");
+
+	if (MsgSend(coid, &outputToDisplay, sizeof(outputToDisplay) + 1, &responseFromDisplay, sizeof(responseFromDisplay)) == -1) { //sends msg to server and SEND blocks until it gets a reply
+		fprintf(stderr, "Error during MsgSend to Display\n");
+		perror(NULL);
+		exit(EXIT_FAILURE);
+	}
+
+	while (input.inputEvent != GRU){
+		rcvid = MsgReceive (chid, &input, sizeof (input), NULL); //receive from Input
+		if (rcvid == -1){
+			perror("MsgReceive");
+		}
+
+	    MsgReply(rcvid, EOK, &responseToInputs, sizeof (responseToInputs)); //reply to inputs to unblock?
+	}
+
+	return R_UNLOCK_ENTRY;
+}
+void *R_UNLOCK_ENTRY(){
+	snprintf(outputToDisplay.msg, sizeof(outputToDisplay.msg), "Right Door Unlocked after Entry");
+
+	if (MsgSend(coid, &outputToDisplay, sizeof(outputToDisplay) + 1, &responseFromDisplay, sizeof(responseFromDisplay)) == -1) { //sends msg to server and SEND blocks until it gets a reply
+		fprintf(stderr, "Error during MsgSend to Display\n");
+		perror(NULL);
+		exit(EXIT_FAILURE);
+	}
+
+	while (input.inputEvent != RO){
+		rcvid = MsgReceive (chid, &input, sizeof (input), NULL); //receive from Input
+		if (rcvid == -1){
+			perror("MsgReceive");
+		}
+
+	    MsgReply(rcvid, EOK, &responseToInputs, sizeof (responseToInputs)); //reply to inputs to unblock?
+	}
+
+	return R_OPEN_ENTRY;
+}
+void *R_OPEN_ENTRY(){
+	snprintf(outputToDisplay.msg, sizeof(outputToDisplay.msg), "Right Door Open after Entry");
+
+	if (MsgSend(coid, &outputToDisplay, sizeof(outputToDisplay) + 1, &responseFromDisplay, sizeof(responseFromDisplay)) == -1) { //sends msg to server and SEND blocks until it gets a reply
+		fprintf(stderr, "Error during MsgSend to Display\n");
+		perror(NULL);
+		exit(EXIT_FAILURE);
+	}
+
+	while (input.inputEvent != RC){
+		rcvid = MsgReceive (chid, &input, sizeof (input), NULL); //receive from Input
+		if (rcvid == -1){
+			perror("MsgReceive");
+		}
+
+	    MsgReply(rcvid, EOK, &responseToInputs, sizeof (responseToInputs)); //reply to inputs to unblock?
+	}
+
+	return R_CLS_ENTRY;
+}
+void *R_CLS_ENTRY(){
+	snprintf(outputToDisplay.msg, sizeof(outputToDisplay.msg), "Right Door Closed after Entry");
+
+	if (MsgSend(coid, &outputToDisplay, sizeof(outputToDisplay) + 1, &responseFromDisplay, sizeof(responseFromDisplay)) == -1) { //sends msg to server and SEND blocks until it gets a reply
+		fprintf(stderr, "Error during MsgSend to Display\n");
+		perror(NULL);
+		exit(EXIT_FAILURE);
+	}
+
+	while (input.inputEvent != GRL){
+		rcvid = MsgReceive (chid, &input, sizeof (input), NULL); //receive from Input
+		if (rcvid == -1){
+			perror("MsgReceive");
+		}
+
+	    MsgReply(rcvid, EOK, &responseToInputs, sizeof (responseToInputs)); //reply to inputs to unblock?
+	}
+
+	return R_LOCK_ENTRY;
+}
+void *R_LOCK_ENTRY(){
+	snprintf(outputToDisplay.msg, sizeof(outputToDisplay.msg),"Right Door Locked after Entry.");
+
+	if (MsgSend(coid, &outputToDisplay, sizeof(outputToDisplay) + 1, &responseFromDisplay, sizeof(responseFromDisplay)) == -1) { //sends msg to server and SEND blocks until it gets a reply
+		fprintf(stderr, "Error during MsgSend to Display\n");
+		perror(NULL);
+		exit(EXIT_FAILURE);
+	}
+
+	return IDLE; //auto transition to IDLE
+}
+
+///START RIGHT FLOW////
+void *R_EXIT(){
+	snprintf(outputToDisplay.msg, sizeof(outputToDisplay.msg),"Right Door Request for Exit. ID#: %d", input.person_id);
+
+	if (MsgSend(coid, &outputToDisplay, sizeof(outputToDisplay) + 1, &responseFromDisplay, sizeof(responseFromDisplay)) == -1) { //sends msg to server and SEND blocks until it gets a reply
+		fprintf(stderr, "Error during MsgSend to Display\n");
+		perror(NULL);
+		exit(EXIT_FAILURE);
+	}
+
+	while (input.inputEvent != GRU){
+		rcvid = MsgReceive (chid, &input, sizeof (input), NULL); //receive from Input
+		if (rcvid == -1){
+			perror("MsgReceive");
+		}
+
+	    MsgReply(rcvid, EOK, &responseToInputs, sizeof (responseToInputs)); //reply to inputs to unblock?
+	}
+
+	return R_UNLOCK_EXIT;
+}
+void *R_UNLOCK_EXIT(){
+	snprintf(outputToDisplay.msg, sizeof(outputToDisplay.msg),"Right Door Unlocked before Exit");
+
+	if (MsgSend(coid, &outputToDisplay, sizeof(outputToDisplay) + 1, &responseFromDisplay, sizeof(responseFromDisplay)) == -1) { //sends msg to server and SEND blocks until it gets a reply
+		fprintf(stderr, "Error during MsgSend to Display\n");
+		perror(NULL);
+		exit(EXIT_FAILURE);
+	}
+
+	while (input.inputEvent != RO){
+		rcvid = MsgReceive (chid, &input, sizeof (input), NULL); //receive from Input
+		if (rcvid == -1){
+			perror("MsgReceive");
+		}
+
+	    MsgReply(rcvid, EOK, &responseToInputs, sizeof (responseToInputs)); //reply to inputs to unblock?
+	}
+
+	return R_OPEN_EXIT;
+}
+void *R_OPEN_EXIT(){
+	snprintf(outputToDisplay.msg, sizeof(outputToDisplay.msg),"Right Door Open before Exit");
+
+	if (MsgSend(coid, &outputToDisplay, sizeof(outputToDisplay) + 1, &responseFromDisplay, sizeof(responseFromDisplay)) == -1) { //sends msg to server and SEND blocks until it gets a reply
+		fprintf(stderr, "Error during MsgSend to Display\n");
+		perror(NULL);
+		exit(EXIT_FAILURE);
+	}
+
+	while (input.inputEvent != WS){
+		rcvid = MsgReceive (chid, &input, sizeof (input), NULL); //receive from Input
+		if (rcvid == -1){
+			perror("MsgReceive");
+		}
+
+	    MsgReply(rcvid, EOK, &responseToInputs, sizeof (responseToInputs)); //reply to inputs to unblock?
+	}
+
+	return R_WOE;
+}
+void *R_WOE(){
+	snprintf(outputToDisplay.msg, sizeof(outputToDisplay.msg), "Weight on Exit is: %d", input.weight);
+
+	if (MsgSend(coid, &outputToDisplay, sizeof(outputToDisplay) + 1, &responseFromDisplay, sizeof(responseFromDisplay)) == -1) { //sends msg to server and SEND blocks until it gets a reply
+		fprintf(stderr, "Error during MsgSend to Display\n");
+		perror(NULL);
+		exit(EXIT_FAILURE);
+	}
+
+	while (input.inputEvent != RC){
+		rcvid = MsgReceive (chid, &input, sizeof (input), NULL); //receive from Input
+		if (rcvid == -1){
+			perror("MsgReceive");
+		}
+
+	    MsgReply(rcvid, EOK, &responseToInputs, sizeof (responseToInputs)); //reply to inputs to unblock?
+	}
+	return R_CLS_EXIT;
+}
+void *R_CLS_EXIT(){
+	snprintf(outputToDisplay.msg, sizeof(outputToDisplay.msg),"Right Door Closed before Exit");
+
+	if (MsgSend(coid, &outputToDisplay, sizeof(outputToDisplay) + 1, &responseFromDisplay, sizeof(responseFromDisplay)) == -1) { //sends msg to server and SEND blocks until it gets a reply
+		fprintf(stderr, "Error during MsgSend to Display\n");
+		perror(NULL);
+		exit(EXIT_FAILURE);
+	}
+
+	while (input.inputEvent != GRL){
+		rcvid = MsgReceive (chid, &input, sizeof (input), NULL); //receive from Input
+		if (rcvid == -1){
+			perror("MsgReceive");
+		}
+
+	    MsgReply(rcvid, EOK, &responseToInputs, sizeof (responseToInputs)); //reply to inputs to unblock?
+	}
+
+	return R_LOCK_EXIT;
+}
+void *R_LOCK_EXIT(){
+	snprintf(outputToDisplay.msg, sizeof(outputToDisplay.msg), "Right Door Locked before Exit");
+
+	if (MsgSend(coid, &outputToDisplay, sizeof(outputToDisplay) + 1, &responseFromDisplay, sizeof(responseFromDisplay)) == -1) { //sends msg to server and SEND blocks until it gets a reply
+		fprintf(stderr, "Error during MsgSend to Display\n");
+		perror(NULL);
+		exit(EXIT_FAILURE);
+	}
+
+	while (input.inputEvent != GLU){
+		rcvid = MsgReceive (chid, &input, sizeof (input), NULL); //receive from Input
+		if (rcvid == -1){
+			perror("MsgReceive");
+		}
+
+	    MsgReply(rcvid, EOK, &responseToInputs, sizeof (responseToInputs)); //reply to inputs to unblock?
+	}
+
+
+	if(input.weight != persistWeight){
+		return ERROR_ALERT; //if weights don't match, lock person in and trigger alert state
+	}
+	else{
+		return L_UNLOCK_EXIT;
+	}
+}
+void *L_UNLOCK_EXIT(){
+	snprintf(outputToDisplay.msg, sizeof(outputToDisplay.msg),"Left Door Unlocked before Exit");
+
+	if (MsgSend(coid, &outputToDisplay, sizeof(outputToDisplay) + 1, &responseFromDisplay, sizeof(responseFromDisplay)) == -1) { //sends msg to server and SEND blocks until it gets a reply
+		fprintf(stderr, "Error during MsgSend to Display\n");
+		perror(NULL);
+		exit(EXIT_FAILURE);
+	}
+
+	while (input.inputEvent != LO){
+		rcvid = MsgReceive (chid, &input, sizeof (input), NULL); //receive from Input
+		if (rcvid == -1){
+			perror("MsgReceive");
+		}
+
+	    MsgReply(rcvid, EOK, &responseToInputs, sizeof (responseToInputs)); //reply to inputs to unblock?
+	}
+
+	return L_OPEN_EXIT;
+}
+void *L_OPEN_EXIT(){
+	snprintf(outputToDisplay.msg, sizeof(outputToDisplay.msg),"Left Door Open before Exit");
+
+	if (MsgSend(coid, &outputToDisplay, sizeof(outputToDisplay) + 1, &responseFromDisplay, sizeof(responseFromDisplay)) == -1) { //sends msg to server and SEND blocks until it gets a reply
+		fprintf(stderr, "Error during MsgSend to Display\n");
+		perror(NULL);
+		exit(EXIT_FAILURE);
+	}
+
+	while (input.inputEvent != LC){
+		rcvid = MsgReceive (chid, &input, sizeof (input), NULL); //receive from Input
+		if (rcvid == -1){
+			perror("MsgReceive");
+		}
+
+	    MsgReply(rcvid, EOK, &responseToInputs, sizeof (responseToInputs)); //reply to inputs to unblock?
+	}
+
+	return L_CLS_EXIT;
+}
+void *L_CLS_EXIT(){
+	snprintf(outputToDisplay.msg, sizeof(outputToDisplay.msg), "Left Door Closed after Exit");
+
+	if (MsgSend(coid, &outputToDisplay, sizeof(outputToDisplay) + 1, &responseFromDisplay, sizeof(responseFromDisplay)) == -1) { //sends msg to server and SEND blocks until it gets a reply
+		fprintf(stderr, "Error during MsgSend to Display\n");
+		perror(NULL);
+		exit(EXIT_FAILURE);
+	}
+
+	while (input.inputEvent != GLL){
+		rcvid = MsgReceive (chid, &input, sizeof (input), NULL); //receive from Input
+		if (rcvid == -1){
+			perror("MsgReceive");
+		}
+
+	    MsgReply(rcvid, EOK, &responseToInputs, sizeof (responseToInputs)); //reply to inputs to unblock?
+	}
+
+	return L_LOCK_EXIT;
+}
+void *L_LOCK_EXIT(){
+	snprintf(outputToDisplay.msg, sizeof(outputToDisplay.msg), "Left Door Locked after Exit");
+
+	if (MsgSend(coid, &outputToDisplay, sizeof(outputToDisplay) + 1, &responseFromDisplay, sizeof(responseFromDisplay)) == -1) { //sends msg to server and SEND blocks until it gets a reply
+		fprintf(stderr, "Error during MsgSend to Display\n");
+		perror(NULL);
+		exit(EXIT_FAILURE);
+	}
+
+	return IDLE; //Auto transition to IDLE
+}
+void *ERROR_ALERT(){
+	snprintf(outputToDisplay.msg, sizeof(outputToDisplay.msg), "ALERT! POTENTIAL PROBLEM HAS OCCURRED");
+
+	if (MsgSend(coid, &outputToDisplay, sizeof(outputToDisplay) + 1, &responseFromDisplay, sizeof(responseFromDisplay)) == -1) { //sends msg to server and SEND blocks until it gets a reply
+		fprintf(stderr, "Error during MsgSend to Display\n");
+		perror(NULL);
+		exit(EXIT_FAILURE);
+	}
+
+	return IDLE;
+}
+
+
+
+

@@ -4,6 +4,8 @@
 #include <sys/neutrino.h>
 #include <sys/netmgr.h>
 #include <string.h>
+#include <limits.h>
+#include <errno.h>
 #include "mystruct.h"
 
 int main(int argc, char* argv[]) //program name (0), pid (1), a (2), op (3), b (4)
@@ -20,9 +22,28 @@ int main(int argc, char* argv[]) //program name (0), pid (1), a (2), op (3), b (
 	}
 
 	pid_t serverpid = atoi(argv[1]);
-	myRequest.a = atoi(argv[2]);
+//	myRequest.a = atoi(argv[2]);
+//	myRequest.op = argv[3][0];
+//	myRequest.b = atoi(argv[4]);
+
+	char *end;
+	char *number = argv[2];
+	long valueA = strtol(number, &end, 10);
+	if (end == number || *end != '\0' || errno == ERANGE){
+		printf("Error, number too large\n");
+		exit(EXIT_FAILURE);
+	}
+	myRequest.a = valueA;
+
 	myRequest.op = argv[3][0];
-	myRequest.b = atoi(argv[4]);
+
+	number = argv[4];
+	long valueB = strtol(number, &end, 10);
+	if (end == number || *end != '\0' || errno == ERANGE){
+		printf("Error, number too large\n");
+		exit(EXIT_FAILURE);
+	}
+	myRequest.b = valueB;
 
 	// establish a connection
 	coid = ConnectAttach(ND_LOCAL_NODE, serverpid, 1, _NTO_SIDE_CHANNEL, 0); //connects to the server by PID

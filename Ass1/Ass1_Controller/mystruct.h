@@ -1,28 +1,32 @@
 #ifndef MYSTRUCT_H_
 #define MYSTRUCT_H_
 
-enum State{
-	ls,
-	rs,
-	ws,
-	lo,
-	ro,
-	lc,
-	rc,
-	gru,
-	grl,
-	gll,
-	glu
-}State;
+typedef enum {
+	LS = 1,
+	RS = 2,
+	WS = 3,
+	LO = 4,
+	RO = 5,
+	LC = 6,
+	RC = 7,
+	GRU = 8,
+	GRL = 9,
+	GLL = 10,
+	GLU = 11
+}Event;
 
-typedef struct StateInput
+typedef struct InputMessage
 {
-	char state[5];
-	enum State inputState;
+	Event inputEvent;
 	int person_id;
 	int weight;
 	int status;
+}InputMessage;
+
+
+typedef struct DisplayMessage{
 	char msg[128];
-}StateInput;
+	int status;
+}DisplayMessage;
 
 #endif /* MYSTRUCT_H_ */
