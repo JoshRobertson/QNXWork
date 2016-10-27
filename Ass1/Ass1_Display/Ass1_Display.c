@@ -26,7 +26,6 @@ int main(int argc, char* argv[])
         printf ("%s\n", inputFromController.msg);
         responseToController.status = 0;
         MsgReply(rcvid, EOK, &responseToController, sizeof (responseToController));
-        //fflush(stdin);
     }
 
     // destroy the channel when done
