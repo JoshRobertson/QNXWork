@@ -11,7 +11,7 @@
 int main(int argc, char* argv[])
 {
 	int coid;
-	char inputEvent[5];
+	char inputEvent[20];
 	char inputId[20];
 	char inputWeight[20];
 	pid_t serverpid = atoi(argv[1]);
@@ -68,6 +68,8 @@ int main(int argc, char* argv[])
 		else if (strncmp(inputEvent, "glu", (strlen(inputEvent)-1))== 0){
 			inputToController.inputEvent = GLU;
 		}
+		else
+			continue;
 
 		if (inputToController.inputEvent == LS || inputToController.inputEvent == RS){
 			printf("Input Person Id: ");
