@@ -1,4 +1,4 @@
-Lab5_Device.o: C:/QNX/Lab5_Device/Lab5_Device.c \
+Lab5_Device.o: C:/Users/joshr/git/robe0591/Lab5/Lab5_Device/Lab5_Device.c \
  C:/qnx660/target/qnx6/usr/include/stdlib.h \
  C:/qnx660/target/qnx6/usr/include/sys/platform.h \
  C:/qnx660/target/qnx6/usr/include/sys/srcversion.h \
@@ -45,4 +45,5 @@ Lab5_Device.o: C:/QNX/Lab5_Device/Lab5_Device.c \
  C:/qnx660/target/qnx6/usr/include/errno.h \
  C:/qnx660/target/qnx6/usr/include/unistd.h \
  C:/qnx660/target/qnx6/usr/include/confname.h \
- C:/qnx660/target/qnx6/usr/include/process.h C:/QNX/Lab5_Device/Globals.h
+ C:/qnx660/target/qnx6/usr/include/process.h \
+ C:/Users/joshr/git/robe0591/Lab5/Lab5_Device/Globals.h

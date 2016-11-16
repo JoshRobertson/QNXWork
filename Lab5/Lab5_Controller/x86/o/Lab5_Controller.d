@@ -1,4 +1,5 @@
-Lab5_Controller.o: C:/QNX/Lab5_Controller/Lab5_Controller.c \
+Lab5_Controller.o: \
+ C:/Users/joshr/git/robe0591/Lab5/Lab5_Controller/Lab5_Controller.c \
  C:/qnx660/target/qnx6/usr/include/stdlib.h \
  C:/qnx660/target/qnx6/usr/include/sys/platform.h \
  C:/qnx660/target/qnx6/usr/include/sys/srcversion.h \
@@ -47,4 +48,4 @@ Lab5_Controller.o: C:/QNX/Lab5_Controller/Lab5_Controller.c \
  C:/qnx660/target/qnx6/usr/include/process.h \
  C:/qnx660/target/qnx6/usr/include/errno.h \
  C:/qnx660/target/qnx6/usr/include/fcntl.h \
- C:/QNX/Lab5_Controller/Globals.h
+ C:/Users/joshr/git/robe0591/Lab5/Lab5_Controller/Globals.h
