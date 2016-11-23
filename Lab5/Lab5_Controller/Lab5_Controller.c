@@ -11,12 +11,9 @@
 #include "Globals.h"
 
 int main(void) {
-	int fd; 				// file descriptor
-	int mrp;				//message receive pulse
-	int size_read; 			// size of buffer read
 	char msg_buffer[128] = ""; 	// buffer to read
-	union recv_msgs rmsg;	// message to receive
-	name_attach_t *attach;	// structure to hold name space data
+	union recv_msgs rmsg;		// message to receive
+	name_attach_t *attach;		// structure to hold name space data
 
 	// create local name
 	attach = name_attach(NULL, MYCONTROLLER, 0);
@@ -27,19 +24,19 @@ int main(void) {
 
 	while (1) {
 		// receive pulse
-		mrp = MsgReceivePulse(attach->chid, &rmsg, sizeof(rmsg), NULL);
-
+		int mrp = MsgReceivePulse(attach->chid, &rmsg, sizeof(rmsg), NULL);
 		if (mrp == -1){
 			perror("Error receiving pulse in controller");
 			return EXIT_FAILURE;
 		}
 
-		fd = open(MYDEVICE, O_RDONLY); // CALLS IO_OPEN
+		int fd = open(MYDEVICE, O_RDONLY); // CALLS IO_OPEN
 		if (fd == -1) {
 			perror("Error opening device from controller");
 			return EXIT_FAILURE;
 		}
-		size_read = read(fd, msg_buffer, sizeof(msg_buffer)); // calls IO_READ
+
+		int size_read = read(fd, msg_buffer, sizeof(msg_buffer)); // calls IO_READ
 		if (size_read == -1) {
 			perror("Error on read");
 			return EXIT_FAILURE;

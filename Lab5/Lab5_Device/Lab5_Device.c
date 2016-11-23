@@ -12,9 +12,6 @@ char* device_buffer;
 char* buffer_pointer;
 char device_status[10]; //store "open" or "closed"
 int coid; //server channel
-int msgSend;
-int nameClosed;
-
 
 int io_read(resmgr_context_t *ctp, io_read_t *msg, RESMGR_OCB_T *ocb) {
 	int nb;
@@ -23,8 +20,13 @@ int io_read(resmgr_context_t *ctp, io_read_t *msg, RESMGR_OCB_T *ocb) {
 	if (ocb->offset == nb)//test to see if we have already sent the whole message.
 		return 0;
 
+	nb = min(nb, msg->i.nbytes);
+
+
 	_IO_SET_READ_NBYTES(ctp, nb);	//Set the number of bytes we will return
 	SETIOV(ctp->iov, device_status, nb);	//Copy status into reply buffer.
+
+	ocb->offset += nb;
 
 	if (nb > 0)	//If we are going to send any bytes update the access time for this resource.
 		ocb->attr->flags |= IOFUNC_ATTR_ATIME;
@@ -37,19 +39,19 @@ int io_write(resmgr_context_t *ctp, io_write_t *msg, RESMGR_OCB_T *ocb) {
 	int i;
 	char* buf;
 	if (msg->i.nbytes == ctp->info.msglen - (ctp->offset + sizeof(*msg))) {
-		buf = (char *) (msg + 1); // have all the data
+		buf = (char *) (msg + 1); // skip the first byte
 		nb = strlen(buf);
 		device_buffer = malloc(strlen(buf));
 		if (NULL == device_buffer)
 			return ENOMEM;
 
-		strncpy(device_buffer, buf, strlen(buf));
+		strncpy(device_buffer, buf, strlen(buf)); //copy msg into device_buffer
 		buffer_pointer = device_buffer; //set pointer to beginning of device_buffer
 
 		for (i = 0; i < strlen(device_buffer); i++){ //check if valid input
 			if(strncmp(buffer_pointer, inputs[OPEN], strlen(inputs[OPEN])) == 0){
 				strcpy(device_status, OPEN_S);
-				buffer_pointer += strlen(inputs[OPEN]);
+				buffer_pointer += strlen(inputs[OPEN]); //increment by the size of the string that was matched
 			}
 			else if(strncmp(buffer_pointer, inputs[CLOSE], strlen(inputs[CLOSE])) == 0){
 				strcpy(device_status, CLOSED_S);
@@ -57,17 +59,18 @@ int io_write(resmgr_context_t *ctp, io_write_t *msg, RESMGR_OCB_T *ocb) {
 			}
 			else if(strncmp(buffer_pointer, inputs[PULSE], strlen(inputs[PULSE])) == 0){
 				buffer_pointer += strlen(inputs[PULSE]);
-				int x = atoi(buffer_pointer);//atoi(buffer_pointer);
-
-				msgSend = MsgSendPulse(coid, sched_get_priority_max(SCHED_RR), 1, x);// send pulse max priority
-				if (msgSend == -1) {
-					fprintf(stderr, "Error sending Pulse\n");
-					perror(NULL);
-					exit(EXIT_FAILURE);
+				int x = atoi(buffer_pointer);
+				if (x > 0 && x < 11){
+					int msgSend = MsgSendPulse(coid, sched_get_priority_max(SCHED_RR), 1, x);// send pulse max priority
+					if (msgSend == -1) {
+						fprintf(stderr, "Error sending Pulse\n");
+						perror(NULL);
+						exit(EXIT_FAILURE);
+					}
 				}
 			}
 			else{
-				buffer_pointer++; //no match, increment by one
+				buffer_pointer++; //no match, increment by one to check again
 			}
 		}
 	}
@@ -94,13 +97,10 @@ int io_write(resmgr_context_t *ctp, io_write_t *msg, RESMGR_OCB_T *ocb) {
 		nb = count;
 	}
 
-	_IO_SET_WRITE_NBYTES(ctp, nb);
+	_IO_SET_WRITE_NBYTES(ctp, nb); //notify number of bytes that were written
 
 	if (msg->i.nbytes > 0)
 		ocb->attr->flags |= IOFUNC_ATTR_MTIME | IOFUNC_ATTR_CTIME;
-
-	sleep(5);
-
 
 	return (_RESMGR_NPARTS(0));
 }
@@ -116,9 +116,6 @@ int main(int argc, char *argv[]) {
 	iofunc_attr_t ioattr;
 	dispatch_context_t *ctp;
 	int id;
-
-	//strncpy(device_status, OPEN_S, sizeof(OPEN_S)); //initial status is open
-	//printf("Device Status (from device): %s\n", device_status); //debug
 
 	dpp = dispatch_create();
 	iofunc_func_init(_RESMGR_CONNECT_NFUNCS, &connect_funcs, _RESMGR_IO_NFUNCS, &io_funcs);
@@ -148,7 +145,7 @@ int main(int argc, char *argv[]) {
 		dispatch_handler(ctp);
 	}
 
-	nameClosed = name_close(coid);
+	int nameClosed = name_close(coid);
 	if (nameClosed == -1){
 		fprintf(stderr, "Error during name_close\n");
 		perror(NULL);
