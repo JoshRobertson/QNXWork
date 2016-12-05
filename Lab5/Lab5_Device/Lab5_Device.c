@@ -122,6 +122,7 @@ int main(int argc, char *argv[]) {
 	connect_funcs.open = io_open;
 	io_funcs.read = io_read;
 	io_funcs.write = io_write;
+
 	iofunc_attr_init(&ioattr, S_IFCHR | 0666, NULL, NULL);
 
 	id = resmgr_attach(dpp, NULL, MYDEVICE, _FTYPE_ANY, NULL, &connect_funcs, &io_funcs, &ioattr);

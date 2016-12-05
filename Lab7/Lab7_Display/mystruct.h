@@ -20,18 +20,14 @@ typedef enum {
 	StopState,// – stop controller
 }State;
 
+typedef struct DisplayMessage{
+	char msg[128];
+}DisplayMessage;
 
 typedef struct InputMessage
 {
 	Event inputEvent;
-	int status;
 }InputMessage;
-
-
-typedef struct DisplayMessage{
-	char msg[128];
-	int status;
-}DisplayMessage;
 
 typedef struct MyPulseStruct {
 	struct _pulse pulse;
