@@ -66,25 +66,38 @@ int io_write(resmgr_context_t *ctp, io_write_t *msg, RESMGR_OCB_T *ocb) {
 	int nb;
 	buffer = (char*)(msg + 1);
 	nb = strlen(buffer);
-	printf("nb: %d, buffer: %s, strlen(buffer): %d\n ", nb, buffer, strlen(buffer));
+	printf("nb: %d, buffer: %s\n", nb, buffer);
 
 	if (strncmp(buffer, "1", 1)== 0){
+		printf("CAUGHT b1!\n");
 		printf("\a");
-		sleep(0.05);
+		delay(50);
 	}
 	else if (strncmp(buffer, "2", 1)== 0){
+		printf("CAUGHT b2!\n");
 		printf("\a");
 		printf("\a");
-		sleep(0.05);
+		delay(50);
 	}
 	else if (strncmp(buffer, "3", 1)== 0){
+		printf("CAUGHT b3!\n");
 		printf("\a");
 		printf("\a");
-		sleep(0.2);
+		delay(200);
 		printf("\a");
-		sleep(0.05);
+		delay(50);
+	}
+	else if (strncmp(buffer, "d", 1) == 0){//check for 'd'
+		printf("CAUGHT d!\n");
+		delayNum = atoi(&buffer[1]);
+		printf("Delaying for: %d\n", delayNum);
+		delay(delayNum);
+	}
+	else{
+		printf("No Recognized Command\n");
 	}
 
+	memset(&buffer[0], 0, sizeof(buffer)); //reset the buffer
 	_IO_SET_WRITE_NBYTES(ctp, nb);
 
 	if (msg->i.nbytes > 0)
@@ -130,8 +143,10 @@ int main(int argc, char *argv[]) {
 	pool_attr.unblock_func = dispatch_unblock;
 	pool_attr.handler_func = dispatch_handler;
 	pool_attr.context_free = dispatch_context_free;
-	pool_attr.lo_water = 2; pool_attr.hi_water = 4;
-	pool_attr.increment = 1; pool_attr.maximum = 50;
+	pool_attr.lo_water = 2;
+	pool_attr.hi_water = 4;
+	pool_attr.increment = 1;
+	pool_attr.maximum = 50;
 
 	if((tpp = thread_pool_create(&pool_attr, POOL_FLAG_EXIT_SELF)) == NULL) {
 		fprintf(stderr, "%s: Unable to initialise thread pool.\n", argv[0]);

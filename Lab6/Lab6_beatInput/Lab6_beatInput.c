@@ -28,13 +28,12 @@ char userinput[20];
 char* filename;
 char* devicename;
 int isInteractive;
+int speed;
+char numBells[10];
 name_attach_t *attach;
 
 int main(int argc, char *argv[]) {
-	int speed = 0;
-	char* numBells;
-	int delayNum = 0;;
-
+	speed = 0;
 
 	if (argv[1][0] == '-'){//program name (0), -loop (1), filename (2), devicename (3), speed (4)
 		isInteractive = 0;
@@ -68,30 +67,30 @@ int main(int argc, char *argv[]) {
 			fgets(userinput, sizeof(userinput), stdin );
 		}
 		else{
-			int file = fopen(filename, O_RDONLY);
+			FILE* file = fopen(filename, O_RDONLY);
 			fgets(userinput, sizeof(userinput), file);
 			fclose(file);
 			//loop mode, read from file and start over when eof reached
 		}
 
 		if (strncmp(userinput, inputs[B1_S], (strlen(userinput) -1))== 0){
-			numBells = "1";
+			strncpy(numBells, "1", 1);
 		}
 		else if (strncmp(userinput, inputs[B2_S], (strlen(userinput) -1))== 0){
-			numBells = "2";
+			strncpy(numBells, "2", 1);
 		}
 		else if (strncmp(userinput, inputs[B3_S], (strlen(userinput) -1))== 0){
-			numBells = "3";
+			strncpy(numBells, "3", 1);
 		}
 		else if (strncmp(userinput, inputs[D_S], 1)== 0){ //compare 1st char to check for d
-			delayNum = atoi(&userinput[1]); //get number for delay
-			sleep(delayNum/1000);//"delay for an extra ### number of milliseconds before sending the next beat"
+			strncpy(numBells, userinput, strlen(userinput)-1);
+			//numBells = &userinput; //send the whole thing to the device and let it handle it
 		}
 		else{
 			continue;
 		}
 
-		sleep(speed/1000); // "The speed parameter is the integer number of milliseconds to delay between beats. "
+		delay(speed); // "The speed parameter is the integer number of milliseconds to delay between beats. "
 
 		int fd = open(devicename, O_WRONLY);
 		if (fd == -1) {

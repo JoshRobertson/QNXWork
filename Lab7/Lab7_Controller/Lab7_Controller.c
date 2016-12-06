@@ -50,7 +50,7 @@ int main(int argc, char* argv[])
 		return EXIT_FAILURE;
 	}
 
-	StateFunc stateFunc = Start; //initialize to IDLE state
+	StateFunc stateFunc = Start; //initialize to Start state
 
 	while (1) {
 		stateFunc = (StateFunc)(*stateFunc)(); //run whatever stateFunc is currently assigned (default IDLE)
