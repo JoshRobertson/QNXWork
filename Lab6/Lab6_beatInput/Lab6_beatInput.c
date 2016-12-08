@@ -31,10 +31,12 @@ char* devicename;
 int isInteractive;
 int speed;
 char* numBells;
+FILE* file;
 name_attach_t *attach;
 
 int main(int argc, char *argv[]) {
 	speed = 0;
+	int fd, size_write;
 
 	if (argv[1][0] == '-'){//program name (0), -loop (1), filename (2), devicename (3), speed (4)
 		isInteractive = 0;
@@ -57,7 +59,7 @@ int main(int argc, char *argv[]) {
 	attach = name_attach(NULL, BEATINPUT, 0);
 
 	while(1){
-		if(isInteractive){
+		if(isInteractive == 1){
 			printf("Input a new command:");
 			fgets(userinput, sizeof(userinput), stdin );
 
@@ -92,8 +94,8 @@ int main(int argc, char *argv[]) {
 			}
 			close(fd);
 		}
-		else{
-			FILE* file = fopen(filename, "r");
+		else if (isInteractive == 0){
+			file = fopen(filename, "r");
 
 			while(1){
 				if(fgets(fileinput, sizeof(fileinput), file) == NULL){
@@ -101,7 +103,7 @@ int main(int argc, char *argv[]) {
 					file = fopen(filename, "r");
 					fgets(fileinput, sizeof(fileinput), file);
 				}
-
+				printf("File Contents: %s\n", fileinput);
 				if (strncmp(fileinput, inputs[B1_S], (strlen(fileinput) -1))== 0){
 					numBells = "1";
 				}
@@ -121,12 +123,12 @@ int main(int argc, char *argv[]) {
 
 				delay(speed); // "The speed parameter is the integer number of milliseconds to delay between beats. "
 
-				int fd = open(devicename, O_WRONLY);
+				fd = open(devicename, O_WRONLY);
 				if (fd == -1) {
 					perror("Error opening device from controller");
 					return EXIT_FAILURE;
 				}
-				int size_write = write(fd, numBells, strlen(numBells));
+				size_write = write(fd, numBells, strlen(numBells));
 				if (size_write == -1) {
 					perror("Error on write");
 					return EXIT_FAILURE;
