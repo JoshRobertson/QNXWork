@@ -11,6 +11,8 @@
 
 #define DISPLAY_NAME "/dev/local/mydisplay"
 #define CONTROLLER_NAME "mycontroller"
+#define MYDEVICE "/dev/local/mydevice"
+#define INPUT "input"
 #define MY_PULSE_CODE   _PULSE_CODE_MINAVAIL
 #define MY_MESSG_CODE	_PULSE_CODE_MINAVAIL+1
 
@@ -22,7 +24,8 @@ char inputEvent[5];
 
 int main(int argc, char* argv[])
 {
-	if((coid = name_open(CONTROLLER_NAME, 0)) < 0) {
+	coid = name_open(CONTROLLER_NAME, 0);
+	if(coid < 0) {
 		perror("name_open failed");
 		return EXIT_FAILURE;
 	}

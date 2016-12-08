@@ -25,11 +25,12 @@ char *inputs[NUMINPUTS] = {
 };
 
 char userinput[20];
+char fileinput[128];
 char* filename;
 char* devicename;
 int isInteractive;
 int speed;
-char numBells[10];
+char* numBells;
 name_attach_t *attach;
 
 int main(int argc, char *argv[]) {
@@ -48,60 +49,92 @@ int main(int argc, char *argv[]) {
 		speed = atoi(argv[2]);
 	}
 
-
 	if(speed < 0 || speed > 5000){
 		printf("Invalid speed\n");
 		return EXIT_FAILURE;
 	}
 
 	attach = name_attach(NULL, BEATINPUT, 0);
-	if (attach == NULL) {
-		perror("Cannot attach name in beatInput");
-		return EXIT_FAILURE;
-	}
 
 	while(1){
 		if(isInteractive){
 			printf("Input a new command:");
 			fgets(userinput, sizeof(userinput), stdin );
+
+			if (strncmp(userinput, inputs[B1_S], (strlen(userinput) -1))== 0){
+				numBells = "1";
+			}
+			else if (strncmp(userinput, inputs[B2_S], (strlen(userinput) -1))== 0){
+				numBells = "2";
+			}
+			else if (strncmp(userinput, inputs[B3_S], (strlen(userinput) -1))== 0){
+				numBells = "3";
+			}
+			else if (strncmp(userinput, inputs[D_S], 1)== 0){ //compare 1st char to check for d
+				int del = atoi(&userinput[1]);
+				delay(del);
+			}
+			else{
+				continue;
+			}
+
+			delay(speed);
+
+			int fd = open(devicename, O_WRONLY);
+			if (fd == -1) {
+				perror("Error opening device from controller");
+				return EXIT_FAILURE;
+			}
+			int size_write = write(fd, numBells, strlen(numBells));
+			if (size_write == -1) {
+				perror("Error on write");
+				return EXIT_FAILURE;
+			}
+			close(fd);
 		}
 		else{
-			FILE* file = fopen(filename, O_RDONLY);
-			fgets(userinput, sizeof(userinput), file);
-			fclose(file);
+			FILE* file = fopen(filename, "r");
+
+			while(1){
+				if(fgets(fileinput, sizeof(fileinput), file) == NULL){
+					fclose(file);
+					file = fopen(filename, "r");
+					fgets(fileinput, sizeof(fileinput), file);
+				}
+
+				if (strncmp(fileinput, inputs[B1_S], (strlen(fileinput) -1))== 0){
+					numBells = "1";
+				}
+				else if (strncmp(fileinput, inputs[B2_S], (strlen(fileinput) -1))== 0){
+					numBells = "2";
+				}
+				else if (strncmp(fileinput, inputs[B3_S], (strlen(fileinput) -1))== 0){
+					numBells = "3";
+				}
+				else if (strncmp(fileinput, inputs[D_S], 1)== 0){ //compare 1st char to check for d
+					int del = atoi(&fileinput[1]);
+					delay(del);
+				}
+				else{
+					continue;
+				}
+
+				delay(speed); // "The speed parameter is the integer number of milliseconds to delay between beats. "
+
+				int fd = open(devicename, O_WRONLY);
+				if (fd == -1) {
+					perror("Error opening device from controller");
+					return EXIT_FAILURE;
+				}
+				int size_write = write(fd, numBells, strlen(numBells));
+				if (size_write == -1) {
+					perror("Error on write");
+					return EXIT_FAILURE;
+				}
+				close(fd);
+			}
 			//loop mode, read from file and start over when eof reached
 		}
-
-		if (strncmp(userinput, inputs[B1_S], (strlen(userinput) -1))== 0){
-			strncpy(numBells, "1", 1);
-		}
-		else if (strncmp(userinput, inputs[B2_S], (strlen(userinput) -1))== 0){
-			strncpy(numBells, "2", 1);
-		}
-		else if (strncmp(userinput, inputs[B3_S], (strlen(userinput) -1))== 0){
-			strncpy(numBells, "3", 1);
-		}
-		else if (strncmp(userinput, inputs[D_S], 1)== 0){ //compare 1st char to check for d
-			strncpy(numBells, userinput, strlen(userinput)-1);
-			//numBells = &userinput; //send the whole thing to the device and let it handle it
-		}
-		else{
-			continue;
-		}
-
-		delay(speed); // "The speed parameter is the integer number of milliseconds to delay between beats. "
-
-		int fd = open(devicename, O_WRONLY);
-		if (fd == -1) {
-			perror("Error opening device from controller");
-			return EXIT_FAILURE;
-		}
-		int size_write = write(fd, numBells, strlen(numBells));
-		if (size_write == -1) {
-			perror("Error on write");
-			return EXIT_FAILURE;
-		}
-		close(fd);
 	}
 	name_detach(attach, 0);
 	return EXIT_SUCCESS;

@@ -10,29 +10,15 @@
 #include <sys/types.h>
 #include <errno.h>
 
-#define BEATDEVICE "/dev/local/beatdevice"
-#define BEATINPUT "beatinput"
-#define B1_S 0
-#define B2_S 1
-#define B3_S 2
-#define D_S  3
-#define NUMINPUTS 4
-
-char *inputs[NUMINPUTS] = {
-		"b1",
-		"b2",
-		"b3",
-		"d"
-};
-
+#define DISPLAY_NAME "/dev/local/mydisplay"
+#define CONTROLLER_NAME "mycontroller"
+#define MYDEVICE "/dev/local/mydevice"
+#define INPUT "input"
 
 char* devicename;
 char* device_memory;
 char* memory_pointer;
 int coid;
-int speed = 0;
-int delayNum = 0;
-int numBells = 0;
 char* buffer;
 
 int io_read(resmgr_context_t *ctp, io_read_t *msg, RESMGR_OCB_T *ocb) {
@@ -66,28 +52,9 @@ int io_write(resmgr_context_t *ctp, io_write_t *msg, RESMGR_OCB_T *ocb) {
 	int nb;
 	buffer = (char*)(msg + 1);
 	nb = strlen(buffer);
-	printf("nb: %d, buffer: %s\n", nb, buffer);
+	//printf("nb: %d, buffer: %s\n", nb, buffer);
 
-	if (strncmp(buffer, "1", 1)== 0){
-		printf("CAUGHT b1!\n");
-		printf("\a\n");
-		delay(50);
-	}
-	else if (strncmp(buffer, "2", 1)== 0){
-		printf("CAUGHT b2!\n");
-		printf("\a\n");
-		printf("\a\n");
-		delay(50);
-	}
-	else if (strncmp(buffer, "3", 1)== 0){
-		printf("CAUGHT b3!\n");
-		printf("\a\n");
-		printf("\a\n");
-		delay(200);
-		printf("\a\n");
-		delay(50);
-	}
-
+	printf("%s", buffer);
 	memset(&buffer[0], 0, sizeof(buffer)); //reset the buffer
 	_IO_SET_WRITE_NBYTES(ctp, nb);
 
@@ -110,8 +77,7 @@ int main(int argc, char *argv[]) {
 	iofunc_attr_t ioattr;
 	int id;
 
-	devicename = argv[1];
-	printf("beatDevice devicename: %s\n", devicename);
+	//devicename = argv[1];
 	dpp = dispatch_create();
 	iofunc_func_init(_RESMGR_CONNECT_NFUNCS, &connect_funcs, _RESMGR_IO_NFUNCS, &io_funcs);
 	connect_funcs.open = io_open;
@@ -120,7 +86,7 @@ int main(int argc, char *argv[]) {
 
 	iofunc_attr_init(&ioattr, S_IFCHR | 0666, NULL, NULL);
 
-	id = resmgr_attach(dpp, NULL, devicename, _FTYPE_ANY, NULL, &connect_funcs,	&io_funcs, &ioattr);
+	id = resmgr_attach(dpp, NULL, DISPLAY_NAME, _FTYPE_ANY, NULL, &connect_funcs,	&io_funcs, &ioattr);
 	if (id == -1) {
 		fprintf(stderr, "Error during resmgr_attach\n");
 		perror(NULL);
