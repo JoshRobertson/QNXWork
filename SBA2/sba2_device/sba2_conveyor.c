@@ -15,15 +15,21 @@
 #define MYDEVICE "/dev/local/mydevice"
 #define INPUT "input"
 
+#define CONVEYOR "/dev/local/conveyor"
+#define MIXER "/dev/local/mixer"
+
 char* devicename;
-char* device_memory;
+char* device_buffer;
+char* buffer_pointer;
+char device_status[100];
+int numMixers;
 char* memory_pointer;
 int coid;
 char* buffer;
 
 int io_read(resmgr_context_t *ctp, io_read_t *msg, RESMGR_OCB_T *ocb) {
 	int nb;
-	nb = strlen(device_memory);
+	nb = strlen(device_status);
 
 	//test to see if we have already sent the whole message.
 	if (ocb->offset == nb)
@@ -36,7 +42,7 @@ int io_read(resmgr_context_t *ctp, io_read_t *msg, RESMGR_OCB_T *ocb) {
 	_IO_SET_READ_NBYTES(ctp, nb);
 
 	//Copy data into reply buffer.
-	SETIOV(ctp->iov, device_memory, nb);
+	SETIOV(ctp->iov, device_status, nb);
 
 	//update offset into our data used to determine start position for next read.
 	ocb->offset += nb;
@@ -50,12 +56,48 @@ int io_read(resmgr_context_t *ctp, io_read_t *msg, RESMGR_OCB_T *ocb) {
 
 int io_write(resmgr_context_t *ctp, io_write_t *msg, RESMGR_OCB_T *ocb) {
 	int nb;
-	buffer = (char*)(msg + 1);
-	nb = strlen(buffer);
-	//printf("nb: %d, buffer: %s\n", nb, buffer);
+	int i;
+	char* buf;
 
-	printf("%s", buffer);
-	memset(&buffer[0], 0, sizeof(buffer)); //reset the buffer
+	buf = (char *) (msg + 1); // skip the first byte
+	nb = strlen(buf);
+	device_buffer = malloc(strlen(buf));
+	if (NULL == device_buffer)
+		return ENOMEM;
+
+	strncpy(device_buffer, buf, strlen(buf)); //copy msg into device_buffer
+	buffer_pointer = device_buffer; //set pointer to beginning of device_buffer
+
+	for (i = 0; i < strlen(device_buffer); i++){ //check if valid input
+		if(strncmp(buffer_pointer, "conveyor on", strlen("conveyor on")) == 0){
+			strcpy(device_status, "On");
+			buffer_pointer += strlen("conveyor on"); //increment by the size of the string that was matched
+		}
+		else if(strncmp(buffer_pointer, "conveyor off" , strlen("conveyor off")) == 0){
+			strcpy(device_status, "Off");
+			buffer_pointer += strlen("conveyor off");
+		}
+		else if(strncmp(buffer_pointer, "point ", strlen("point ")) == 0){
+			buffer_pointer += strlen("point ");
+			int x = atoi(buffer_pointer); //x is the mixer number
+			if (strncmp(device_status, "On", strlen("On")) == 0){
+				printf("Error, device is on\n");
+			}
+			else if (x > 0 && x < 6){
+				int msgSend = MsgSendPulse(coid, sched_get_priority_max(SCHED_RR), 1, x);// send pulse max priority
+				if (msgSend == -1) {
+					fprintf(stderr, "Error sending Pulse\n");
+					perror(NULL);
+					exit(EXIT_FAILURE);
+				}
+			}
+		}
+		else{
+			buffer_pointer++; //no match, increment by one to check again
+		}
+	}
+
+
 	_IO_SET_WRITE_NBYTES(ctp, nb);
 
 	if (msg->i.nbytes > 0)

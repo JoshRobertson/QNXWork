@@ -2,23 +2,11 @@
 #define MYSTRUCT_H_
 
 typedef enum {
-	LD = 1,
-	LU = 2,
-	RD = 3,
-	RU = 4,
-	S = 5,
+	S = 1,
+	P = 2,
+	R = 3,
+	C = 4,
 }Event;
-
-typedef enum {
-	StartState,//, = initialize controller
-	ReadyState,// – display readyMsg, then wait at least 3 seconds
-	LeftDownState,// – display leftMsg
-	RightDownState,// – display rightMsg
-	ArmedState,// – display armedMsg, then wait at least 2 seconds
-	PunchState,// – display punchMsg, then wait at least 1 second
-	ExitState,// – display exitMsg, then wait at least 5 seconds
-	StopState,// – stop controller
-}State;
 
 typedef struct DisplayMessage{
 	char msg[128];
@@ -27,6 +15,7 @@ typedef struct DisplayMessage{
 typedef struct InputMessage
 {
 	Event inputEvent;
+	int inputMixer;
 }InputMessage;
 
 typedef struct MyPulseStruct {
