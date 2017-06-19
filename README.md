@@ -1,2 +1,2 @@
 # QNXWork
-Fall 2016 - All the various programs written for the QNX OS
+Fall 2016 - All my various programs written for the QNX OS
