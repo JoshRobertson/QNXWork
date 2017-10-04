@@ -29,14 +29,14 @@ int 	coid;
 name_attach_t *attach;
 
 //State Function Prototypes
-void *Start();//, = initialize controller
-void *Ready();// – display readyMsg, then wait at least 3 seconds
-void *LeftDown();// – display leftMsg
-void *RightDown();// – display rightMsg
-void *Armed();// – display armedMsg, then wait at least 2 seconds
-void *Punch();// – display punchMsg, then wait at least 1 second
-void *Exit();// – display exitMsg, then wait at least 5 seconds
-void *Stop();// – stop controller
+void *Start();//, - initialize controller
+void *Ready();// - display readyMsg, then wait at least 3 seconds
+void *LeftDown();// - display leftMsg
+void *RightDown();// - display rightMsg
+void *Armed();// - display armedMsg, then wait at least 2 seconds
+void *Punch();// - display punchMsg, then wait at least 1 second
+void *Exit();// - display exitMsg, then wait at least 5 seconds
+void *Stop();// - stop controller
 
 int main(int argc, char* argv[])
 {
@@ -95,7 +95,7 @@ void *Ready(){
 
 void *LeftDown(){
 	printf("Moving to state: LeftDown\n");
-	strcpy(outputToDisplay.msg, "Left button down – press right button to arm press\n");
+	strcpy(outputToDisplay.msg, "Left button down ï¿½ press right button to arm press\n");
 
 	if (MsgSend(coid, &outputToDisplay, sizeof(outputToDisplay) + 1, &outputToDisplay, sizeof(outputToDisplay)) == -1) {
 		fprintf(stderr, "Error during MsgSend to Display\n");
@@ -122,7 +122,7 @@ void *LeftDown(){
 
 void *RightDown(){
 	printf("Moving to state: RightDown\n");
-	strcpy(outputToDisplay.msg, "Right button down – press left button to arm press\n");
+	strcpy(outputToDisplay.msg, "Right button down ï¿½ press left button to arm press\n");
 
 	if (MsgSend(coid, &outputToDisplay, sizeof(outputToDisplay) + 1, &outputToDisplay, sizeof(outputToDisplay)) == -1) {
 		fprintf(stderr, "Error during MsgSend to Display\n");
@@ -148,7 +148,7 @@ void *RightDown(){
 }
 void *Armed(){
 	printf("Moving to state: Armed\n");
-	strcpy(outputToDisplay.msg, "DANGER – Press is Armed!\n");
+	strcpy(outputToDisplay.msg, "DANGER ï¿½ Press is Armed!\n");
 
 	if (MsgSend(coid, &outputToDisplay, sizeof(outputToDisplay) + 1, &outputToDisplay, sizeof(outputToDisplay)) == -1) {
 		fprintf(stderr, "Error during MsgSend to Display\n");
